@@ -7,7 +7,7 @@ const notes = (await getCollection('notes', (e) => !e.data.draft)).sort((a, b) =
 <Base title="Notes" description="Short, dated, one idea each.">
   <section>
     <h1>Notes</h1>
-    <p class="mono lede">Short, dated, one idea each. The long ones are articles.</p>
+    <p class="mono lede">Short observations, written down before I forget them.</p>
     <ul class="list" style="margin-top:1.5rem">{notes.map((n) => <NoteRow entry={n} />)}</ul>
   </section>
 </Base>

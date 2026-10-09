@@ -51,7 +51,7 @@ export default defineConfig({
     expressiveCode(),
     mdx(),
     sitemap(),
-    icon({ include: { lucide: ['sun', 'moon', 'copy', 'info', 'lightbulb', 'triangle-alert', 'circle-x', 'arrow-right', 'rss'] } }),
+    icon({ include: { lucide: ['sun', 'moon', 'copy', 'info', 'lightbulb', 'triangle-alert', 'circle-x', 'arrow-right', 'rss', 'github', 'linkedin', 'message-circle'] } }),
   ],
   markdown: {
     // Astro 7 defaults to Sätteri; rehype-callouts and rehype-mermaid are
