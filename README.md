@@ -4,6 +4,8 @@ Personal site and technical blog. Astro, static output, served by nginx on a
 DigitalOcean droplet. Everything here is hand-editable; nothing depends on an
 agent to understand it.
 
+**Writing or changing the site? Read [PUBLISHING.md](PUBLISHING.md).** Server operations are in [infra/RUNBOOK.md](infra/RUNBOOK.md).
+
 ## Run it
 
 ```bash
