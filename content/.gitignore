@@ -6,3 +6,4 @@
 .obsidian/cache
 .obsidian/plugins/*/data.json
 .trash/
+.obsidian/appearance.json
