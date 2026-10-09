@@ -1,0 +1,156 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit or tag to deploy (defaults to main)
+        required: false
+
+# Never let two deploys interleave: a half-rsynced release directory
+# swapped into place would serve a broken site.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: build and release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Resolve Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Chromium for Mermaid
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Chromium system deps only
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # The same gates as CI. A push straight to main still gets checked.
+      - run: npx astro check
+      - run: npm run build
+
+      - name: Sanity-check the build before shipping it
+        run: |
+          set -euo pipefail
+          for page in index.html 404.html notes/index.html articles/index.html contact/index.html; do
+            f="dist/$page"
+            [ -f "$f" ] || { echo "::error::$f missing"; exit 1; }
+            grep -q '<h1' "$f" || { echo "::error::$f has no <h1>"; exit 1; }
+          done
+          [ -f dist/rss.xml ] && [ -f dist/sitemap-index.xml ] || { echo "::error::rss or sitemap missing"; exit 1; }
+          echo "build looks sane: $(du -sh dist | cut -f1), $(find dist -type f | wc -l) files"
+
+      - name: Configure SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          # Pinned host key rather than StrictHostKeyChecking=no, so a
+          # man-in-the-middle cannot quietly receive the deploy.
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # Upload into a release directory named for the commit, then swap a
+      # symlink. The swap is atomic, so visitors never see a partial release,
+      # and rolling back is re-pointing the symlink at the previous one.
+      - name: Upload release
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          ROOT: ${{ secrets.DEPLOY_ROOT }}
+        run: |
+          set -euo pipefail
+          RELEASE="$ROOT/releases/${GITHUB_SHA}"
+          ssh -i ~/.ssh/deploy "$USER@$HOST" "mkdir -p '$RELEASE'"
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy" dist/ "$USER@$HOST:$RELEASE/"
+          echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
+
+      - name: Activate release
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          ROOT: ${{ secrets.DEPLOY_ROOT }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy "$USER@$HOST" bash -se <<EOF
+            set -euo pipefail
+            # ln -s then mv is atomic; ln -sf on an existing symlink is not.
+            ln -sfn "$RELEASE" "$ROOT/current.new"
+            mv -Tf "$ROOT/current.new" "$ROOT/current"
+
+            # Keep the five most recent releases so a rollback target exists.
+            cd "$ROOT/releases"
+            ls -1dt */ | grep -v '^placeholder/$' | tail -n +6 | xargs -r rm -rf
+            echo "active: \$(readlink "$ROOT/current")"
+          EOF
+
+      # Verify against this specific box by IP, with the real hostname, so
+      # the check is independent of what DNS happens to say right now.
+      - name: Verify the live site
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          sleep 2
+          fail=0
+          for path in / /notes /articles /contact /rss.xml /sitemap-index.xml; do
+            code=$(curl -sS --resolve "ryankennedy.me:443:$HOST" -o /dev/null -w '%{http_code}' --max-time 20 "https://ryankennedy.me${path}")
+            if [ "$code" != "200" ]; then echo "::error::${path} returned $code"; fail=1; else echo "ok  ${path}  $code"; fi
+          done
+          body=$(curl -sS --resolve "ryankennedy.me:443:$HOST" --max-time 20 https://ryankennedy.me/)
+          grep -q 'Ryan' <<<"$body" || { echo "::error::homepage HTML has no name in it"; fail=1; }
+          www=$(curl -sS --resolve "www.ryankennedy.me:443:$HOST" -o /dev/null -w '%{http_code}' --max-time 20 https://www.ryankennedy.me/ || echo 000)
+          [ "$www" = "301" ] || echo "::warning::www returned $www, expected a 301 to the apex"
+          exit $fail
+
+      - name: Roll back if verification failed
+        if: failure() && env.RELEASE != ''
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          ROOT: ${{ secrets.DEPLOY_ROOT }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy "$USER@$HOST" bash -se <<EOF
+            set -euo pipefail
+            cd "$ROOT/releases"
+            previous=\$(ls -1dt */ | sed -n 2p)
+            if [ -n "\$previous" ]; then
+              ln -sfn "$ROOT/releases/\${previous%/}" "$ROOT/current.new"
+              mv -Tf "$ROOT/current.new" "$ROOT/current"
+              echo "rolled back to \$(readlink "$ROOT/current")"
+            else
+              echo "no previous release to roll back to" >&2
+            fi
+          EOF
