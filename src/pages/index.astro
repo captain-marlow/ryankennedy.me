@@ -1,0 +1,35 @@
+---
+import { getCollection } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+import Base from '../layouts/Base.astro';
+import Eyebrow from '../components/Eyebrow.astro';
+import ArticleRow from '../components/ArticleRow.astro';
+import NoteRow from '../components/NoteRow.astro';
+
+const byDate = <T extends { data: { date: Date } }>(a: T, b: T) => b.data.date.valueOf() - a.data.date.valueOf();
+const notes = (await getCollection('notes', (e) => !e.data.draft)).sort(byDate).slice(0, 3);
+const articles = (await getCollection('articles', (e) => !e.data.draft)).sort(byDate).slice(0, 3);
+---
+<Base>
+  <section class="intro">
+    <h1>Hi, I'm Ryan.</h1>
+    <p>I'm a <strong>software engineer</strong> who runs a self-hosted homelab and writes about what breaks.</p>
+  </section>
+
+  <section>
+    <Eyebrow label="Notes" />
+    <ul class="list">{notes.map((n) => <NoteRow entry={n} />)}</ul>
+    <a class="more mono" href="/notes">All notes <Icon name="lucide:arrow-right" /></a>
+  </section>
+
+  <section>
+    <Eyebrow label="Articles" />
+    <ul class="list">{articles.map((a) => <ArticleRow entry={a} />)}</ul>
+    <a class="more mono" href="/articles">All articles <Icon name="lucide:arrow-right" /></a>
+  </section>
+</Base>
+<style>
+  .intro h1 { margin-bottom: 0.75rem; }
+  .intro p { color: var(--text-muted); max-width: 36rem; }
+  .intro strong { color: var(--text); font-weight: 500; }
+</style>

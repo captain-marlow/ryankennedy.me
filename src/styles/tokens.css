@@ -1,0 +1,55 @@
+/* Design tokens. Everything about colour, type and spacing lives here;
+   structure lives in layouts and components; content carries no styling.
+   Dark is the primary theme. Light is derived. */
+
+:root {
+  /* --font-sans and --font-mono are defined by Astro's <Font> components. */
+
+  --accent: hsl(240 95% 62%);
+  --accent-2: hsl(333 100% 55%);
+
+  --bg: hsl(0 0% 100%);
+  --bg-subtle: hsl(225 40% 96%);
+  --bg-code: hsl(225 40% 97%);
+  --border: hsl(225 16% 86%);
+  --text: hsl(222 22% 5%);
+  --text-muted: hsl(225 15% 50%);
+
+  --c-tip: hsl(150 60% 40%);
+  --c-warn: hsl(38 92% 42%);
+  --c-danger: var(--accent-2);
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.5625rem;
+  --fs-2xl: 1.953rem;
+
+  --measure: 42rem;
+  --measure-article: 68ch;
+  --radius: 6px;
+  --gutter: 1.5rem;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --accent: hsl(240 95% 72%);
+  --bg: hsl(225 28% 10%);
+  --bg-subtle: hsl(225 24% 14%);
+  --bg-code: hsl(225 26% 12%);
+  --border: hsl(225 15% 23%);
+  --text: hsl(225 20% 92%);
+  --text-muted: hsl(225 12% 62%);
+
+  --c-tip: hsl(150 55% 58%);
+  --c-warn: hsl(40 95% 62%);
+  --c-danger: hsl(333 100% 68%);
+
+  color-scheme: dark;
+}
+
+@media (max-width: 480px) {
+  :root { --gutter: 1rem; }
+}

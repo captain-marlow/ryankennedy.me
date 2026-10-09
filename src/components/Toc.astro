@@ -1,0 +1,30 @@
+---
+import type { MarkdownHeading } from 'astro';
+const { headings } = Astro.props as { headings: MarkdownHeading[] };
+const items = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+{items.length > 1 && (
+  <aside class="toc" aria-label="On this page">
+    <span class="mono">On this page</span>
+    <ol>
+      {items.map((h) => (
+        <li class={`depth-${h.depth}`}><a href={`#${h.slug}`} data-toc={h.slug}>{h.text}</a></li>
+      ))}
+    </ol>
+  </aside>
+)}
+<script>
+  function wire() {
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-toc]'));
+    if (!links.length) return;
+    const targets = links.map((l) => document.getElementById(l.dataset.toc!)).filter(Boolean) as HTMLElement[];
+    const set = (id: string) => links.forEach((l) => l.classList.toggle('active', l.dataset.toc === id));
+    const io = new IntersectionObserver((entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+      if (visible[0]) set(visible[0].target.id);
+    }, { rootMargin: '0px 0px -70% 0px' });
+    targets.forEach((t) => io.observe(t));
+  }
+  wire();
+  document.addEventListener('astro:page-load', wire);
+</script>

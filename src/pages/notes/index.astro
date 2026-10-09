@@ -1,0 +1,13 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import NoteRow from '../../components/NoteRow.astro';
+const notes = (await getCollection('notes', (e) => !e.data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+<Base title="Notes" description="Short, dated, one idea each.">
+  <section>
+    <h1>Notes</h1>
+    <p class="mono lede">Short, dated, one idea each. The long ones are articles.</p>
+    <ul class="list" style="margin-top:1.5rem">{notes.map((n) => <NoteRow entry={n} />)}</ul>
+  </section>
+</Base>

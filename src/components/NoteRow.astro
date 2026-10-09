@@ -1,0 +1,11 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { shortDate } from '../lib/dates';
+const { entry } = Astro.props as { entry: CollectionEntry<'notes'> };
+---
+<li>
+  <a class="row note" href={`/notes/${entry.id}`}>
+    <time class="date mono" datetime={entry.data.date.toISOString()}>{shortDate(entry.data.date)}</time>
+    <span class="title">{entry.data.title}</span>
+  </a>
+</li>

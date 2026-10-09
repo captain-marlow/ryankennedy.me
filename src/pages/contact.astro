@@ -1,0 +1,65 @@
+---
+import Base from '../layouts/Base.astro';
+import Eyebrow from '../components/Eyebrow.astro';
+import { site } from '../lib/site';
+---
+<Base title="Contact" description="Send Ryan a message.">
+  <section>
+    <h1>Contact</h1>
+    <p class="mono lede" style="margin-bottom:2rem">A message here lands in my inbox. No address to scrape.</p>
+
+    <form class="form" id="contact" method="POST" action="https://api.web3forms.com/submit" novalidate>
+      <input type="hidden" name="access_key" value={site.web3formsKey} />
+      <input type="hidden" name="subject" value="New message from ryankennedy.me" />
+      <input type="hidden" name="from_name" value="ryankennedy.me" />
+      <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <div class="two">
+        <label><span class="mono">Name</span><input type="text" name="name" required autocomplete="name" /></label>
+        <label><span class="mono">Email</span><input type="email" name="email" required autocomplete="email" /></label>
+      </div>
+      <label><span class="mono">Message</span><textarea name="message" rows="6" required></textarea></label>
+      <div class="h-captcha" data-captcha="true"></div>
+      <p class="status mono" id="contact-status" aria-live="polite"></p>
+      <button class="btn" type="submit">Send</button>
+    </form>
+
+    <Eyebrow label="Elsewhere" />
+    <ul class="links">
+      <li><span class="k">GitHub</span><a href={site.links.github}>github.com/captain-marlow</a></li>
+      <li><span class="k">LinkedIn</span><a href={site.links.linkedin}>linkedin.com/in/…</a></li>
+      <li><span class="k">Matrix</span><a href={site.links.matrix}>@ryan:ryankennedy.dev</a></li>
+      <li><span class="k">RSS</span><a href="/rss.xml">ryankennedy.me/rss.xml</a></li>
+    </ul>
+  </section>
+  <script src="https://web3forms.com/client/script.js" async defer is:inline></script>
+  <script>
+    // Submit as JSON and show the result inline; falls back to a normal POST
+    // (Web3Forms' hosted thank-you page) if this script never runs.
+    const form = document.getElementById('contact') as HTMLFormElement | null;
+    const status = document.getElementById('contact-status');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!form.reportValidity()) return;
+      const btn = form.querySelector('button')!;
+      btn.disabled = true;
+      status!.dataset.state = '';
+      status!.textContent = 'Sending…';
+      try {
+        const res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(Object.fromEntries(new FormData(form))),
+        });
+        const json = await res.json();
+        status!.dataset.state = res.ok ? 'ok' : 'error';
+        status!.textContent = res.ok ? 'Sent. I will reply by email.' : (json.message || 'That did not go through.');
+        if (res.ok) form.reset();
+      } catch {
+        status!.dataset.state = 'error';
+        status!.textContent = 'That did not go through. Try again, or reach me elsewhere below.';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</Base>

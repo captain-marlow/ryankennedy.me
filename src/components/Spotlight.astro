@@ -1,0 +1,9 @@
+<div id="spot" aria-hidden="true"></div>
+<script>
+  window.addEventListener('mousemove', (e) => {
+    const s = document.getElementById('spot');
+    if (!s) return;
+    s.style.setProperty('--mx', e.clientX + 'px');
+    s.style.setProperty('--my', e.clientY + 'px');
+  }, { passive: true });
+</script>

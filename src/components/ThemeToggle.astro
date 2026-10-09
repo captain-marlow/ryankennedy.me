@@ -1,0 +1,28 @@
+---
+import { Icon } from 'astro-icon/components';
+---
+<button class="toggle" type="button" data-theme-toggle aria-label="Toggle theme">
+  <Icon name="lucide:moon" class="moon" />
+  <Icon name="lucide:sun" class="sun" />
+</button>
+<style>
+  .toggle {
+    background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: var(--radius);
+    width: 2rem; height: 2rem; display: grid; place-items: center; cursor: pointer;
+  }
+  .toggle:hover { color: var(--text); border-color: var(--text-muted); background: var(--bg-subtle); }
+  .toggle :global(svg) { width: 15px; height: 15px; }
+  :global(:root[data-theme='dark']) .toggle :global(.sun) { display: none; }
+  :global(:root[data-theme='light']) .toggle :global(.moon) { display: none; }
+</style>
+<script>
+  // Event delegation, so it keeps working across view-transition swaps.
+  document.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest('[data-theme-toggle]');
+    if (!t) return;
+    const root = document.documentElement;
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    try { localStorage.setItem('theme', next); } catch {}
+  });
+</script>

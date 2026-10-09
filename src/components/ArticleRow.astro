@@ -1,0 +1,15 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { isoDate } from '../lib/dates';
+const { entry, showTags = false } = Astro.props as { entry: CollectionEntry<'articles'>; showTags?: boolean };
+---
+<li>
+  <a class="row" href={`/articles/${entry.id}`}>
+    <span class="title">{entry.data.title}</span>
+    <span class="desc">{entry.data.description}</span>
+    {showTags && entry.data.tags.length > 0 && (
+      <span class="tags">{entry.data.tags.map((t) => <span class="chip">{t}</span>)}</span>
+    )}
+    <time class="date mono" datetime={entry.data.date.toISOString()}>{isoDate(entry.data.date)}</time>
+  </a>
+</li>
