@@ -84,11 +84,21 @@ exists; without it the box serves plain HTTP, only useful before cutover.
 Change nginx by editing `infra/files/*.conf` and re-running; the playbook
 validates with `nginx -t` before reloading.
 
+Do not run the playbook while a deploy is in flight. Its apt upgrade step can
+restart nginx for a second, and a deploy that is verifying at that moment
+rolls itself back (it retries three times, which covers most of this, but
+not a longer package upgrade). Check `gh run list --workflow Deploy` first.
+
 ### Certificate
 
 Covers `ryankennedy.me` and `www`, ECDSA, issued 2026-10-09, expires
-2027-01-07. Renews automatically over HTTP-01 against `/var/www/certbot`.
-No API token is stored on the server.
+2027-01-07. Renews automatically over HTTP-01 against `/var/www/certbot`
+(dry run passed 2026-10-09). No API token is stored on the server.
+
+**After the first real renewal lands (around December 2026):** raise HSTS in
+`infra/files/headers-snippet.conf` from `max-age=604800` to
+`max-age=31536000; includeSubDomains`, re-run the playbook. Not before: HSTS
+cannot be withdrawn from browsers that cached it.
 
 ```bash
 ssh rkme 'sudo certbot renew --dry-run'
