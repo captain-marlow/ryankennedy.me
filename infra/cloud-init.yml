@@ -1,0 +1,6 @@
+#cloud-config
+# Passed to `doctl compute droplet create --user-data-file` so the first
+# Ansible run can connect as root with Ryan's ed25519 key. The playbook then
+# creates the admin user and disables root login.
+ssh_authorized_keys:
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAdG6DcSKx7FZiqHydLy+Q7gSyYzmn8cuvqCfRe+qTzN admin@ryankennedy.dev
