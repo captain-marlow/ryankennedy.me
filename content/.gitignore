@@ -1,0 +1,8 @@
+# Obsidian per-machine state. app.json, templates.json and core-plugins.json
+# are committed on purpose: they carry the settings Astro depends on.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace-*.json
+.obsidian/cache
+.obsidian/plugins/*/data.json
+.trash/
