@@ -265,6 +265,13 @@
         mode: "0644"
       notify: Reload nginx
 
+    - name: Install the security headers snippet
+      ansible.builtin.copy:
+        src: files/headers-snippet.conf
+        dest: /etc/nginx/snippets/ryankennedy-headers.conf
+        mode: "0644"
+      notify: Reload nginx
+
     - name: Install the site vhost
       ansible.builtin.copy:
         src: "files/{{ 'nginx-site.conf' if enable_ssl | bool else 'nginx-site-http.conf' }}"
