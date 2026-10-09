@@ -123,10 +123,21 @@ jobs:
         run: |
           set -euo pipefail
           sleep 2
+          # A path gets three tries five seconds apart, so a one-second
+          # nginx restart (the playbook's apt upgrade can do that) does not
+          # fail the deploy and trigger a rollback for nothing.
+          check() {
+            local path=$1 code attempt
+            for attempt in 1 2 3; do
+              code=$(curl -sS --resolve "ryankennedy.me:443:$HOST" -o /dev/null -w '%{http_code}' --max-time 20 "https://ryankennedy.me${path}" || echo 000)
+              [ "$code" = "200" ] && { echo "ok  ${path}  $code"; return 0; }
+              echo "try $attempt: ${path} returned $code"; sleep 5
+            done
+            echo "::error::${path} returned $code after 3 tries"; return 1
+          }
           fail=0
-          for path in / /notes /articles /contact /rss.xml /sitemap-index.xml; do
-            code=$(curl -sS --resolve "ryankennedy.me:443:$HOST" -o /dev/null -w '%{http_code}' --max-time 20 "https://ryankennedy.me${path}")
-            if [ "$code" != "200" ]; then echo "::error::${path} returned $code"; fail=1; else echo "ok  ${path}  $code"; fi
+          for path in / /notes /articles /contact /rss.xml /sitemap-index.xml /og.png /robots.txt; do
+            check "$path" || fail=1
           done
           body=$(curl -sS --resolve "ryankennedy.me:443:$HOST" --max-time 20 https://ryankennedy.me/)
           grep -q 'Ryan' <<<"$body" || { echo "::error::homepage HTML has no name in it"; fail=1; }
